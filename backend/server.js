@@ -6,11 +6,14 @@ import { MongoMemoryServer } from "mongodb-memory-server";
 import authRoutes from "./routes/authRoutes.js";
 import itemRoutes from "./routes/itemRoutes.js";
 import requestRoutes from "./routes/requestRoute.js";
+import path from "path";
 
 dotenv.config();
 
 const requiredEnvVars = ["MONGO_URI"];
 const missingEnvVars = requiredEnvVars.filter((key) => !process.env[key]);
+
+const __dirname = path.resolve()
 
 if (missingEnvVars.length) {
   console.error(`Missing required environment variables: ${missingEnvVars.join(", ")}`);
@@ -27,6 +30,7 @@ const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173")
   .filter(Boolean);
 
 const app = express();
+if(process.env.NODE_ENV !== "production"){
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -39,6 +43,8 @@ app.use(
     },
   })
 );
+}
+
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
@@ -50,6 +56,15 @@ app.use("/api/auth", authRoutes);
 app.use("/api/posts", itemRoutes);
 app.use("/api/requests", requestRoutes);
 
+if(process.env.NODE_ENV === "production"){
+  app.use(express.static (path.join(__dirname,"../frontend/dist")) )
+
+app.get("*",(req,res) =>{
+  res.sendFile(path.join(__dirname,"../frontend","dist","index.html"))
+}
+)
+
+}
 const port = process.env.PORT || 5000;
 const allowInMemoryFallback = process.env.ALLOW_IN_MEMORY_FALLBACK !== "false";
 let memoryServer;
